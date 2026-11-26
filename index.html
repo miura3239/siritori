@@ -1,0 +1,1993 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>みんなで絵しりとり</title>
+<script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-color: #f8f9fc;
+    --card-bg: #ffffff;
+    --primary: #ff8c37;
+    --primary-hover: #f07820;
+    --primary-light: #fff3e8;
+    --text-main: #3b4252;
+    --text-sub: #6c7589;
+    --border-color: #e2e8f0;
+    --radius-lg: 20px;
+    --radius-md: 14px;
+    --radius-sm: 10px;
+  }
+
+  * {
+    box-sizing: border-box;
+    font-family: 'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', 'Yu Gothic', sans-serif;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+  }
+
+  .app-container {
+    width: 100%;
+    max-width: 820px;
+    background: var(--card-bg);
+    min-height: 100vh;
+    padding: 20px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+    display: flex;
+    flex-direction: column;
+  }
+
+  @media (min-width: 840px) {
+    body {
+      padding: 20px 0;
+    }
+    .app-container {
+      min-height: auto;
+      border-radius: 28px;
+      padding: 28px 36px;
+    }
+  }
+
+  .hidden {
+    display: none !important;
+  }
+
+  /* タイトル・ヘッダー */
+  .app-title {
+    text-align: center;
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--primary);
+    margin: 10px 0 24px;
+    letter-spacing: 0.05em;
+  }
+
+  /* ホームタブ */
+  .tab-group {
+    display: flex;
+    background: #f1f5f9;
+    padding: 6px;
+    border-radius: 16px;
+    margin-bottom: 24px;
+  }
+
+  .tab-btn {
+    flex: 1;
+    padding: 14px;
+    border: none;
+    background: transparent;
+    font-size: 17px;
+    font-weight: 800;
+    color: var(--text-sub);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .tab-btn.active {
+    background: #ffffff;
+    color: var(--primary);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+
+  /* フォーム部品 */
+  .form-group {
+    margin-bottom: 20px;
+  }
+
+  .form-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 8px;
+  }
+
+  .text-input {
+    width: 100%;
+    padding: 14px 18px;
+    font-size: 18px;
+    font-weight: 700;
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-md);
+    outline: none;
+    color: var(--text-main);
+    transition: border-color 0.2s;
+    user-select: text;
+  }
+
+  .text-input:focus {
+    border-color: var(--primary);
+  }
+
+  .room-code-input {
+    font-size: 28px;
+    text-align: center;
+    letter-spacing: 0.25em;
+  }
+
+  /* メインボタン */
+  .btn-primary {
+    width: 100%;
+    padding: 16px;
+    background: var(--primary);
+    color: #ffffff;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 20px;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 4px 0 #d96b18;
+    transition: transform 0.1s, background 0.2s;
+    margin-top: 8px;
+  }
+
+  .btn-primary:active {
+    transform: translateY(3px);
+    box-shadow: 0 1px 0 #d96b18;
+  }
+
+  .btn-primary:disabled {
+    background: #cbd5e1;
+    box-shadow: 0 4px 0 #94a3b8;
+    cursor: not-allowed;
+  }
+
+  .btn-secondary {
+    padding: 12px 18px;
+    background: #f1f5f9;
+    color: var(--text-main);
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-md);
+    font-size: 15px;
+    font-weight: 800;
+    cursor: pointer;
+  }
+
+  /* ロビー画面 */
+  .lobby-header {
+    text-align: center;
+    margin-bottom: 14px;
+  }
+
+  .lobby-room-label {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-main);
+  }
+
+  .lobby-room-number {
+    font-size: 46px;
+    font-weight: 800;
+    color: var(--primary);
+    letter-spacing: 0.12em;
+    line-height: 1.1;
+    margin: 4px 0;
+  }
+
+  .lobby-room-sub {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-main);
+  }
+
+  .players-box {
+    background: #f4f6fa;
+    border-radius: 18px;
+    padding: 12px 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    min-height: 64px;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+
+  .player-pill {
+    background: #ffffff;
+    border: 3px solid #38bdf8;
+    border-radius: 999px;
+    padding: 6px 16px;
+    font-size: 15px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+  }
+
+  .color-picker-section {
+    text-align: center;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 18px;
+  }
+
+  .color-picker-title {
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 10px;
+  }
+
+  .avatar-colors-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 36px);
+    gap: 10px 14px;
+    justify-content: center;
+  }
+
+  .avatar-color-dot {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    cursor: pointer;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.15s;
+  }
+
+  .avatar-color-dot.selected {
+    box-shadow: 0 0 0 3px #ffffff, 0 0 0 6px #334155;
+    transform: scale(1.05);
+  }
+
+  .avatar-color-dot.selected::after {
+    content: '✔';
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 800;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+  }
+
+  .settings-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px 20px;
+    margin-bottom: 22px;
+  }
+
+  @media (max-width: 600px) {
+    .settings-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .setting-item-label {
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--text-main);
+  }
+
+  .option-row {
+    display: flex;
+    gap: 8px;
+  }
+
+  .option-btn {
+    flex: 1;
+    padding: 10px 8px;
+    border-radius: 999px;
+    border: 2px solid #e2e8f0;
+    background: #f8fafc;
+    color: var(--text-sub);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .option-btn.active {
+    background: var(--primary-light);
+    border-color: var(--primary);
+    color: #b45309;
+    box-shadow: 0 0 0 3px rgba(255, 140, 55, 0.15);
+  }
+
+  .option-btn:disabled {
+    cursor: default;
+  }
+
+  .stepper-box {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #f4f6fa;
+    border-radius: 999px;
+    padding: 4px 8px;
+  }
+
+  .stepper-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: var(--primary);
+    color: #ffffff;
+    font-size: 20px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    line-height: 1;
+  }
+
+  .stepper-btn:disabled {
+    background: #cbd5e1;
+    cursor: default;
+  }
+
+  .stepper-value {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--text-main);
+  }
+
+  /* ゲーム画面 */
+  .game-top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f4f6fa;
+    padding: 10px 16px;
+    border-radius: var(--radius-md);
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .game-badge {
+    background: #ffffff;
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 800;
+    border: 2px solid var(--border-color);
+  }
+
+  .timer-badge {
+    color: #e11d48;
+    border-color: #fecdd3;
+    background: #fff1f2;
+  }
+
+  /* 最初の文字バナー（1人目専用） */
+  .prompt-banner {
+    background: var(--primary-light);
+    border: 2px solid var(--primary);
+    border-radius: var(--radius-md);
+    padding: 12px 16px;
+    text-align: center;
+    margin-bottom: 12px;
+  }
+
+  .prompt-main-text {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--text-main);
+  }
+
+  .prompt-char {
+    display: inline-block;
+    background: var(--primary);
+    color: #ffffff;
+    font-size: 26px;
+    padding: 2px 14px;
+    border-radius: 10px;
+    margin: 0 6px;
+  }
+
+  /* ひとつ前の絵カード（2人目以降専用） */
+  .prev-drawing-box {
+    background: #eff6ff;
+    border: 3px solid #60a5fa;
+    border-radius: var(--radius-md);
+    padding: 12px;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  @media (max-width: 540px) {
+    .prev-drawing-box {
+      flex-direction: column;
+      text-align: center;
+      gap: 10px;
+    }
+  }
+
+  .prev-drawing-img-wrap {
+    width: 190px;
+    aspect-ratio: 4 / 3;
+    background: #ffffff;
+    border: 2px solid #bfdbfe;
+    border-radius: 12px;
+    overflow: hidden;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+
+  .prev-drawing-img-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+
+  .prev-drawing-info {
+    flex: 1;
+  }
+
+  .prev-drawing-label {
+    display: inline-block;
+    background: #3b82f6;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 800;
+    padding: 3px 10px;
+    border-radius: 999px;
+    margin-bottom: 6px;
+  }
+
+  .prev-drawing-guide {
+    font-size: 17px;
+    font-weight: 800;
+    color: #1e3a8a;
+    line-height: 1.4;
+  }
+
+  /* キャンバスエリア */
+  .canvas-wrapper {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    max-height: 420px;
+    background: #ffffff;
+    border: 3px solid #cbd5e1;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    touch-action: none;
+    margin-bottom: 12px;
+  }
+
+  canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    cursor: crosshair;
+  }
+
+  /* お絵かきツールバー（12色 + 4太さ） */
+  .drawing-tools {
+    background: #f8fafc;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+
+  .palette-12 {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+
+  @media (max-width: 540px) {
+    .palette-12 {
+      grid-template-columns: repeat(6, 1fr);
+    }
+  }
+
+  .pen-color-btn {
+    aspect-ratio: 1;
+    border-radius: 50%;
+    border: 2px solid rgba(0,0,0,0.12);
+    cursor: pointer;
+    transition: transform 0.1s;
+    max-width: 38px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  .pen-color-btn.active {
+    transform: scale(1.18);
+    box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #1e293b;
+  }
+
+  .tools-bottom-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .pen-sizes {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .size-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    border: 2px solid var(--border-color);
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+
+  .size-btn.active {
+    border-color: var(--primary);
+    background: var(--primary-light);
+  }
+
+  .size-dot {
+    background: #1e293b;
+    border-radius: 50%;
+  }
+
+  .action-tools {
+    display: flex;
+    gap: 6px;
+  }
+
+  .tool-action-btn {
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 2px solid var(--border-color);
+    background: #ffffff;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    color: var(--text-main);
+  }
+
+  .tool-action-btn.active {
+    border-color: var(--primary);
+    background: var(--primary-light);
+  }
+
+  /* 答え入力バー */
+  .answer-box {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .answer-input {
+    flex: 1;
+    padding: 12px 16px;
+    font-size: 18px;
+    font-weight: 700;
+    border: 2px solid var(--primary);
+    border-radius: var(--radius-md);
+    outline: none;
+    user-select: text;
+  }
+
+  .submit-answer-btn {
+    padding: 13px 22px;
+    background: var(--primary);
+    color: #ffffff;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 17px;
+    font-weight: 800;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  /* トースト通知・エラー表示 */
+  .feedback-msg {
+    margin-top: 8px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 700;
+    text-align: center;
+  }
+
+  .feedback-error {
+    background: #fee2e2;
+    color: #b91c1c;
+  }
+
+  .feedback-success {
+    background: #dcfce7;
+    color: #15803d;
+  }
+
+  /* ⭐ほかの子が描いています⭐ ロック画面 */
+  .lock-screen-box {
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+    border: 3px dashed #f59e0b;
+    border-radius: 24px;
+    padding: 56px 20px;
+    text-align: center;
+    margin: 12px 0;
+  }
+
+  .lock-star-title {
+    font-size: 26px;
+    font-weight: 800;
+    color: #d97706;
+    margin-bottom: 14px;
+    animation: pulseScale 1.6s infinite ease-in-out;
+  }
+
+  @keyframes pulseScale {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.04); }
+  }
+
+  .lock-drawer-name {
+    display: inline-block;
+    background: #ffffff;
+    padding: 8px 20px;
+    border-radius: 999px;
+    font-size: 17px;
+    font-weight: 800;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    margin-bottom: 14px;
+  }
+
+  .lock-sub-text {
+    font-size: 14px;
+    font-weight: 700;
+    color: #92400e;
+  }
+
+  /* 結果発表（順番にめくるショー＆一覧） */
+  .result-header {
+    text-align: center;
+    margin-bottom: 16px;
+  }
+
+  .result-title-badge {
+    display: inline-block;
+    background: var(--primary-light);
+    color: var(--primary);
+    font-size: 15px;
+    font-weight: 800;
+    padding: 4px 16px;
+    border-radius: 999px;
+    margin-bottom: 6px;
+  }
+
+  .result-score {
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--text-main);
+    margin: 4px 0;
+  }
+
+  .reveal-stage {
+    background: #f8fafc;
+    border: 3px solid #cbd5e1;
+    border-radius: 22px;
+    padding: 18px;
+    text-align: center;
+    margin-bottom: 18px;
+  }
+
+  .reveal-step-indicator {
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--text-sub);
+    margin-bottom: 8px;
+  }
+
+  .reveal-start-char-pill {
+    display: inline-block;
+    background: #3b82f6;
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 800;
+    padding: 4px 14px;
+    border-radius: 999px;
+    margin-bottom: 10px;
+  }
+
+  .reveal-card-anim {
+    animation: popIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+
+  @keyframes popIn {
+    0% { opacity: 0; transform: scale(0.88) translateY(12px); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  .reveal-image-box {
+    max-width: 340px;
+    margin: 0 auto 12px;
+    aspect-ratio: 4 / 3;
+    background: #ffffff;
+    border: 3px solid var(--border-color);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+  }
+
+  .reveal-image-box img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+
+  .reveal-word-display {
+    font-size: 30px;
+    font-weight: 800;
+    color: var(--text-main);
+    margin: 6px 0;
+    letter-spacing: 0.06em;
+  }
+
+  .reveal-status-tag {
+    display: inline-block;
+    padding: 5px 14px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 800;
+    margin-top: 4px;
+  }
+
+  .tag-ok {
+    background: #dcfce7;
+    color: #15803d;
+  }
+
+  .tag-ng {
+    background: #fee2e2;
+    color: #b91c1c;
+  }
+
+  .reveal-controls-row {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 14px;
+  }
+
+  /* めくり終わった後の全一覧ギャラリー */
+  .result-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+    margin-top: 16px;
+    margin-bottom: 20px;
+  }
+
+  .result-card {
+    background: #ffffff;
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 10px;
+    text-align: center;
+    position: relative;
+  }
+
+  .result-card.card-ng {
+    border-color: #fca5a5;
+    background: #fef2f2;
+  }
+
+  .result-card img {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: contain;
+    background: #ffffff;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+  }
+
+  .result-word {
+    font-size: 17px;
+    font-weight: 800;
+    margin-top: 6px;
+    color: var(--text-main);
+  }
+
+  .result-author {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-sub);
+  }
+
+  .loading-overlay {
+    text-align: center;
+    padding: 24px 10px;
+    font-weight: 700;
+    color: var(--text-sub);
+  }
+</style>
+</head>
+<body>
+
+<div class="app-container">
+  <!-- ① ホーム画面 -->
+  <div id="screen-home">
+    <div class="app-title">🎨 みんなで絵しりとり</div>
+
+    <div class="tab-group">
+      <button id="tab-create" class="tab-btn active" onclick="switchHomeTab('create')">部屋を作る</button>
+      <button id="tab-join" class="tab-btn" onclick="switchHomeTab('join')">部屋に入る</button>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="input-player-name">あなたの なまえ（ひらがな など）</label>
+      <input type="text" id="input-player-name" class="text-input" placeholder="例：たろう" maxlength="10">
+    </div>
+
+    <!-- 「部屋を作る」パネル -->
+    <div id="panel-create">
+      <button id="btn-create-room" class="btn-primary" onclick="createRoom()">部屋を作る</button>
+    </div>
+
+    <!-- 「部屋に入る」パネル -->
+    <div id="panel-join" class="hidden">
+      <div class="form-group">
+        <label class="form-label" for="input-room-code">お友だちから聞いた 4けたの部屋番号</label>
+        <input type="tel" id="input-room-code" class="text-input room-code-input" placeholder="0000" maxlength="4" pattern="[0-9]*">
+      </div>
+      <button id="btn-join-room" class="btn-primary" onclick="joinRoom()">部屋に入る</button>
+    </div>
+
+    <div id="home-status" class="feedback-msg feedback-error hidden"></div>
+  </div>
+
+  <!-- ② 待機ロビー画面 -->
+  <div id="screen-lobby" class="hidden">
+    <div class="lobby-header">
+      <div class="lobby-room-label">部屋番号</div>
+      <div id="lobby-room-number" class="lobby-room-number">0000</div>
+      <div class="lobby-room-sub">この番号をお友だちに伝えてね</div>
+    </div>
+
+    <!-- 参加メンバー一覧 -->
+    <div id="lobby-players-list" class="players-box"></div>
+
+    <!-- 自分の色選択（12色） -->
+    <div class="color-picker-section">
+      <div class="color-picker-title">自分の色を決めてね</div>
+      <div id="avatar-colors-grid" class="avatar-colors-grid"></div>
+    </div>
+
+    <!-- ルール設定 -->
+    <div class="settings-grid">
+      <div>
+        <div class="setting-item-label">あそびかた</div>
+        <div class="option-row">
+          <button class="option-btn active" disabled>絵だけでつなぐ協力モード</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="setting-item-label">答え合わせ</div>
+        <div class="option-row">
+          <button class="option-btn active" disabled>最後にみんなで発表！</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="setting-item-label">終わりかた</div>
+        <div class="option-row">
+          <button id="opt-end-turns" class="option-btn active" onclick="updateSetting('endMode', 'turns')">回数で終了</button>
+          <button id="opt-end-time" class="option-btn" onclick="updateSetting('endMode', 'time')">時間で終了</button>
+        </div>
+      </div>
+
+      <div id="setting-turns-box">
+        <div class="setting-item-label">ひとり何回描く？</div>
+        <div class="stepper-box">
+          <button id="btn-turns-minus" class="stepper-btn" onclick="changeStepper('turnsPerPlayer', -1)">−</button>
+          <span id="val-turns" class="stepper-value">2</span>
+          <button id="btn-turns-plus" class="stepper-btn" onclick="changeStepper('turnsPerPlayer', 1)">＋</button>
+        </div>
+      </div>
+
+      <div id="setting-totaltime-box" class="hidden">
+        <div class="setting-item-label">全体の制限時間（分）</div>
+        <div class="stepper-box">
+          <button id="btn-totaltime-minus" class="stepper-btn" onclick="changeStepper('totalMinutes', -1)">−</button>
+          <span id="val-totaltime" class="stepper-value">3分</span>
+          <button id="btn-totaltime-plus" class="stepper-btn" onclick="changeStepper('totalMinutes', 1)">＋</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="setting-item-label">1回の制限時間（秒）</div>
+        <div class="stepper-box">
+          <button id="btn-turntime-minus" class="stepper-btn" onclick="changeStepper('turnSeconds', -10)">−</button>
+          <span id="val-turntime" class="stepper-value">60秒</span>
+          <button id="btn-turntime-plus" class="stepper-btn" onclick="changeStepper('turnSeconds', 10)">＋</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="host-start-area">
+      <button class="btn-primary" onclick="hostStartGame()">はじめる</button>
+    </div>
+    <div id="guest-wait-area" class="loading-overlay hidden">
+      ホストが「はじめる」を押すのを待っています...
+    </div>
+  </div>
+
+  <!-- ③ ゲーム画面 -->
+  <div id="screen-game" class="hidden">
+    <div class="game-top-bar">
+      <div class="game-badge">いま <span id="game-chain-count">1</span>枚目</div>
+      <div id="game-progress-badge" class="game-badge">1 / 4 ターン目</div>
+      <div class="game-badge timer-badge">のこり <span id="game-timer">60</span>秒</div>
+    </div>
+
+    <!-- A. 自分のターンの画面 -->
+    <div id="my-turn-view">
+      <!-- 1人目だけの表示：最初の文字 -->
+      <div id="first-turn-banner" class="prompt-banner">
+        <div style="font-size: 14px; font-weight: 800; color: var(--primary); margin-bottom: 4px;">★ あなたが 1人目です！</div>
+        <div class="prompt-main-text">
+          「<span id="game-current-char" class="prompt-char">あ</span>」からはじまる絵を描こう！
+        </div>
+      </div>
+
+      <!-- 2人目以降の表示：ひとつ前の絵だけを表示 -->
+      <div id="prev-drawing-banner" class="prev-drawing-box hidden">
+        <div class="prev-drawing-img-wrap">
+          <img id="prev-drawing-img" src="" alt="ひとつ前の絵">
+        </div>
+        <div class="prev-drawing-info">
+          <div class="prev-drawing-label">ひとつ前の絵</div>
+          <div class="prev-drawing-guide">
+            この絵は なにかな？<br>
+            さいごの文字から つづく絵を描こう！
+          </div>
+        </div>
+      </div>
+
+      <div class="canvas-wrapper">
+        <canvas id="draw-canvas" width="800" height="600"></canvas>
+      </div>
+
+      <div class="drawing-tools">
+        <div id="pen-palette-12" class="palette-12"></div>
+        <div class="tools-bottom-row">
+          <div class="pen-sizes" id="pen-sizes-box">
+            <button class="size-btn" data-size="3" onclick="selectPenSize(3)" title="ほそい"><div class="size-dot" style="width:4px;height:4px;"></div></button>
+            <button class="size-btn active" data-size="7" onclick="selectPenSize(7)" title="ふつう"><div class="size-dot" style="width:9px;height:9px;"></div></button>
+            <button class="size-btn" data-size="14" onclick="selectPenSize(14)" title="ふとい"><div class="size-dot" style="width:15px;height:15px;"></div></button>
+            <button class="size-btn" data-size="24" onclick="selectPenSize(24)" title="ごくぶと"><div class="size-dot" style="width:22px;height:22px;"></div></button>
+          </div>
+          <div class="action-tools">
+            <button id="btn-eraser" class="tool-action-btn" onclick="toggleEraser()">消しゴム</button>
+            <button class="tool-action-btn" onclick="undoStroke()">1つ戻る</button>
+            <button class="tool-action-btn" onclick="clearCanvasConfirm()">全部消す</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="answer-box">
+        <input type="text" id="input-answer-word" class="answer-input" placeholder="描いた絵の名前を「ひらがな」で入力">
+        <button class="submit-answer-btn" onclick="submitWord()">決定！</button>
+      </div>
+      <div id="game-feedback" class="feedback-msg hidden"></div>
+    </div>
+
+    <!-- B. 他の子が描いている間のロック画面 -->
+    <div id="other-turn-lock-view" class="lock-screen-box hidden">
+      <div class="lock-star-title">⭐ほかの子が描いています⭐</div>
+      <div id="lock-drawer-badge" class="lock-drawer-name">● 〇〇 さんの番です</div>
+      <div class="lock-sub-text">どんな絵ができあがるか ワクワクしながら待っていよう！</div>
+    </div>
+  </div>
+
+  <!-- ④ 結果発表画面（順番にめくって盛り上がる答え合わせ） -->
+  <div id="screen-result" class="hidden">
+    <div class="result-header">
+      <div id="result-reason" class="result-title-badge">おしまい！</div>
+      <div id="result-headline" class="result-score">みんなで 答え合わせをしよう！</div>
+    </div>
+
+    <!-- 順番にめくるステージ -->
+    <div id="reveal-stage" class="reveal-stage">
+      <div class="reveal-start-char-pill">さいしょの文字：「<span id="reveal-initial-char">あ</span>」</div>
+      <div id="reveal-step-indicator" class="reveal-step-indicator">1 / 4 枚目</div>
+
+      <div id="reveal-card-container" class="reveal-card-anim">
+        <div class="reveal-image-box">
+          <img id="reveal-img" src="" alt="描いた絵">
+        </div>
+        <div id="reveal-author" style="font-size:14px; font-weight:800;"></div>
+        <div id="reveal-word" class="reveal-word-display">？？？</div>
+        <div id="reveal-status-tag" class="reveal-status-tag"></div>
+      </div>
+
+      <div id="host-reveal-controls" class="reveal-controls-row">
+        <button id="btn-reveal-next" class="btn-primary" style="max-width:320px;" onclick="hostNextReveal()">つぎの絵を見る ▶</button>
+      </div>
+      <div id="guest-reveal-wait" class="loading-overlay hidden" style="padding:10px 0 0;">
+        ホストが順番にめくっています...
+      </div>
+    </div>
+
+    <!-- 全部めくり終わった後に表示される一覧 -->
+    <div id="result-all-section" class="hidden">
+      <div style="text-align:center; font-size:16px; font-weight:800; color:var(--text-main); margin-bottom:8px;">
+        📋 今回のしりとり一覧
+      </div>
+      <div id="result-gallery" class="result-gallery"></div>
+
+      <div id="host-replay-area">
+        <button class="btn-primary" onclick="hostPlayAgain()">もう一度同じメンバーで遊ぶ</button>
+      </div>
+      <div id="guest-replay-wait" class="loading-overlay hidden">
+        ホストが次の準備をするのを待っています...
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ==========================================
+// 1. 定数・カラー設定・50音データ
+// ==========================================
+const AVATAR_COLORS = [
+  '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16', '#22c55e',
+  '#38bdf8', '#0284c7', '#8b5cf6', '#ec4899', '#8d6e63', '#334155'
+];
+
+const PEN_COLORS = [
+  '#1e293b', // くろ
+  '#ef4444', // あか
+  '#f97316', // オレンジ
+  '#facc15', // きいろ
+  '#22c55e', // みどり
+  '#15803d', // ふかみどり
+  '#38bdf8', // みずいろ
+  '#2563eb', // あお
+  '#8b5cf6', // むらさき
+  '#f472b6', // ピンク
+  '#fdbcb4', // うすだいだい
+  '#854d0e'  // ちゃいろ
+];
+
+// 最初の文字候補（清音44文字）
+const START_CHARS = [
+  'あ','い','う','え','お',
+  'か','き','く','け','こ',
+  'さ','し','す','せ','そ',
+  'た','ち','つ','て','と',
+  'な','に','ぬ','ね','の',
+  'は','ひ','ふ','へ','ほ',
+  'ま','み','む','め','も',
+  'や','ゆ','よ',
+  'ら','り','る','れ','ろ',
+  'わ'
+];
+
+const APP_PREFIX = 'class-eshiritori-2026-';
+
+// ==========================================
+// 2. アプリ状態管理
+// ==========================================
+let peer = null;
+let isHost = false;
+let myPeerId = '';
+let roomCode = '';
+let hostConn = null;
+let guestConns = {};
+
+let roomState = {
+  players: [], // { id, name, color, isHost }
+  settings: {
+    endMode: 'turns',     // 'turns' or 'time'
+    turnsPerPlayer: 2,
+    totalMinutes: 3,
+    turnSeconds: 60
+  },
+  game: {
+    status: 'lobby',      // 'lobby', 'playing', 'result'
+    initialChar: 'あ',    // ゲーム開始時の最初の文字
+    turnIndex: 0,
+    totalTurns: 0,
+    // historyの各要素: { word, nextChar, imgData, playerName, playerColor, isValidChain, statusText }
+    history: [],
+    endReason: '',
+    gameEndTime: 0,
+    revealIndex: 0        // 結果画面で今何枚目までめくったか（0始まり）
+  }
+};
+
+let timerInterval = null;
+let currentTurnRemaining = 60;
+
+// お絵かき用状態
+const canvas = document.getElementById('draw-canvas');
+const ctx = canvas.getContext('2d');
+let isDrawing = false;
+let penColor = PEN_COLORS[0];
+let penSize = 7;
+let isEraser = false;
+let strokes = [];
+let currentStroke = null;
+
+// ==========================================
+// 3. 初期化・UI構築
+// ==========================================
+window.addEventListener('DOMContentLoaded', () => {
+  initAvatarColorPicker();
+  initPenPalette();
+  setupCanvasEvents();
+});
+
+function switchHomeTab(tab) {
+  document.getElementById('tab-create').classList.toggle('active', tab === 'create');
+  document.getElementById('tab-join').classList.toggle('active', tab === 'join');
+  document.getElementById('panel-create').classList.toggle('hidden', tab !== 'create');
+  document.getElementById('panel-join').classList.toggle('hidden', tab !== 'join');
+  hideHomeError();
+}
+
+function showHomeError(msg) {
+  const el = document.getElementById('home-status');
+  el.textContent = msg;
+  el.classList.remove('hidden');
+}
+
+function hideHomeError() {
+  document.getElementById('home-status').classList.add('hidden');
+}
+
+function showScreen(screenId) {
+  ['screen-home', 'screen-lobby', 'screen-game', 'screen-result'].forEach(id => {
+    document.getElementById(id).classList.toggle('hidden', id !== screenId);
+  });
+}
+
+// ==========================================
+// 4. 通信処理（PeerJS P2P）
+// ==========================================
+function generateRoomCode() {
+  return Math.floor(1000 + Math.random() * 9000).toString();
+}
+
+function createRoom() {
+  const name = document.getElementById('input-player-name').value.trim();
+  if (!name) {
+    showHomeError('なまえを入力してください！');
+    return;
+  }
+  hideHomeError();
+  const btn = document.getElementById('btn-create-room');
+  btn.disabled = true;
+  btn.textContent = '部屋を作っています...';
+
+  isHost = true;
+  roomCode = generateRoomCode();
+  const peerId = APP_PREFIX + roomCode;
+
+  peer = new Peer(peerId);
+
+  peer.on('open', (id) => {
+    myPeerId = id;
+    roomState.players = [{
+      id: myPeerId,
+      name: name,
+      color: AVATAR_COLORS[6],
+      isHost: true
+    }];
+    enterLobbyUI();
+  });
+
+  peer.on('connection', (conn) => {
+    conn.on('open', () => {
+      guestConns[conn.peer] = conn;
+    });
+
+    conn.on('data', (data) => {
+      handleHostReceiveData(conn.peer, data);
+    });
+
+    conn.on('close', () => {
+      delete guestConns[conn.peer];
+      roomState.players = roomState.players.filter(p => p.id !== conn.peer);
+      broadcastState();
+      renderLobby();
+    });
+  });
+
+  peer.on('error', (err) => {
+    btn.disabled = false;
+    btn.textContent = '部屋を作る';
+    if (err.type === 'unavailable-id') {
+      peer.destroy();
+      createRoom();
+    } else {
+      showHomeError('通信エラーが発生しました。もう一度お試しください。');
+    }
+  });
+}
+
+function joinRoom() {
+  const name = document.getElementById('input-player-name').value.trim();
+  const code = document.getElementById('input-room-code').value.trim();
+  if (!name) {
+    showHomeError('なまえを入力してください！');
+    return;
+  }
+  if (!/^\d{4}$/.test(code)) {
+    showHomeError('4けたの数字を入力してください！');
+    return;
+  }
+  hideHomeError();
+  const btn = document.getElementById('btn-join-room');
+  btn.disabled = true;
+  btn.textContent = '部屋を探しています...';
+
+  isHost = false;
+  roomCode = code;
+  peer = new Peer();
+
+  peer.on('open', (id) => {
+    myPeerId = id;
+    const targetPeerId = APP_PREFIX + roomCode;
+    hostConn = peer.connect(targetPeerId, { reliable: true });
+
+    const timeout = setTimeout(() => {
+      if (!hostConn.open) {
+        btn.disabled = false;
+        btn.textContent = '部屋に入る';
+        showHomeError('部屋が見つかりません。番号を確かめてね！');
+      }
+    }, 6000);
+
+    hostConn.on('open', () => {
+      clearTimeout(timeout);
+      const randomColor = AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)];
+      hostConn.send({
+        type: 'JOIN',
+        player: {
+          id: myPeerId,
+          name: name,
+          color: randomColor,
+          isHost: false
+        }
+      });
+    });
+
+    hostConn.on('data', (data) => {
+      handleGuestReceiveData(data);
+    });
+
+    hostConn.on('close', () => {
+      alert('ホストとの接続が切れました。最初の画面に戻ります。');
+      location.reload();
+    });
+  });
+
+  peer.on('error', () => {
+    btn.disabled = false;
+    btn.textContent = '部屋に入る';
+    showHomeError('部屋に入れませんでした。番号を確かめてね！');
+  });
+}
+
+function handleHostReceiveData(senderId, data) {
+  if (data.type === 'JOIN') {
+    if (roomState.game.status !== 'lobby') {
+      if (guestConns[senderId]) {
+        guestConns[senderId].send({ type: 'ERROR', message: 'すでにゲームが始まっています！' });
+      }
+      return;
+    }
+    const usedColors = roomState.players.map(p => p.color);
+    const availableColor = AVATAR_COLORS.find(c => !usedColors.includes(c)) || data.player.color;
+    data.player.color = availableColor;
+
+    roomState.players.push(data.player);
+    broadcastState();
+    renderLobby();
+  }
+  else if (data.type === 'CHANGE_COLOR') {
+    const p = roomState.players.find(pl => pl.id === senderId);
+    if (p) {
+      p.color = data.color;
+      broadcastState();
+      renderLobby();
+    }
+  }
+  else if (data.type === 'SUBMIT_WORD') {
+    processSubmittedWord(senderId, data.word, data.imgData);
+  }
+}
+
+function handleGuestReceiveData(data) {
+  if (data.type === 'ERROR') {
+    alert(data.message);
+    location.reload();
+  }
+  else if (data.type === 'STATE_SYNC') {
+    const prevStatus = roomState.game.status;
+    const prevTurn = roomState.game.turnIndex;
+    roomState = data.state;
+
+    if (roomState.game.status === 'lobby') {
+      enterLobbyUI();
+    } else if (roomState.game.status === 'playing') {
+      showScreen('screen-game');
+      if (prevStatus !== 'playing' || prevTurn !== roomState.game.turnIndex) {
+        setupNewTurnUI();
+      } else {
+        updateGameHeaderUI();
+      }
+    } else if (roomState.game.status === 'result') {
+      showResultScreen();
+    }
+  }
+  else if (data.type === 'WORD_REJECTED') {
+    showGameFeedback(data.message, true);
+  }
+}
+
+function broadcastState() {
+  if (!isHost) return;
+  const payload = { type: 'STATE_SYNC', state: roomState };
+  Object.values(guestConns).forEach(conn => {
+    if (conn.open) conn.send(payload);
+  });
+}
+
+function sendToHostOrSelf(payload) {
+  if (isHost) {
+    handleHostReceiveData(myPeerId, payload);
+  } else if (hostConn && hostConn.open) {
+    hostConn.send(payload);
+  }
+}
+
+// ==========================================
+// 5. ロビー画面の制御
+// ==========================================
+function initAvatarColorPicker() {
+  const grid = document.getElementById('avatar-colors-grid');
+  grid.innerHTML = '';
+  AVATAR_COLORS.forEach(color => {
+    const dot = document.createElement('div');
+    dot.className = 'avatar-color-dot';
+    dot.style.backgroundColor = color;
+    dot.dataset.color = color;
+    dot.onclick = () => selectMyAvatarColor(color);
+    grid.appendChild(dot);
+  });
+}
+
+function selectMyAvatarColor(color) {
+  if (isHost) {
+    const me = roomState.players.find(p => p.id === myPeerId);
+    if (me) me.color = color;
+    broadcastState();
+    renderLobby();
+  } else {
+    sendToHostOrSelf({ type: 'CHANGE_COLOR', color: color });
+  }
+}
+
+function enterLobbyUI() {
+  showScreen('screen-lobby');
+  document.getElementById('lobby-room-number').textContent = roomCode;
+  document.getElementById('host-start-area').classList.toggle('hidden', !isHost);
+  document.getElementById('guest-wait-area').classList.toggle('hidden', isHost);
+  renderLobby();
+}
+
+function renderLobby() {
+  const listEl = document.getElementById('lobby-players-list');
+  listEl.innerHTML = '';
+  const me = roomState.players.find(p => p.id === myPeerId);
+
+  roomState.players.forEach(p => {
+    const pill = document.createElement('div');
+    pill.className = 'player-pill';
+    pill.style.borderColor = p.color;
+    pill.style.color = p.color;
+    pill.textContent = p.name + (p.id === myPeerId ? '（じぶん）' : '');
+    listEl.appendChild(pill);
+  });
+
+  if (me) {
+    document.querySelectorAll('.avatar-color-dot').forEach(dot => {
+      dot.classList.toggle('selected', dot.dataset.color === me.color);
+    });
+  }
+
+  const s = roomState.settings;
+  document.getElementById('opt-end-turns').classList.toggle('active', s.endMode === 'turns');
+  document.getElementById('opt-end-time').classList.toggle('active', s.endMode === 'time');
+  document.getElementById('setting-turns-box').classList.toggle('hidden', s.endMode !== 'turns');
+  document.getElementById('setting-totaltime-box').classList.toggle('hidden', s.endMode !== 'time');
+
+  document.getElementById('val-turns').textContent = s.turnsPerPlayer;
+  document.getElementById('val-totaltime').textContent = s.totalMinutes + '分';
+  document.getElementById('val-turntime').textContent = s.turnSeconds + '秒';
+
+  ['opt-end-turns', 'opt-end-time', 'btn-turns-minus', 'btn-turns-plus',
+   'btn-totaltime-minus', 'btn-totaltime-plus', 'btn-turntime-minus', 'btn-turntime-plus'].forEach(id => {
+    document.getElementById(id).disabled = !isHost;
+  });
+}
+
+function updateSetting(key, value) {
+  if (!isHost) return;
+  roomState.settings[key] = value;
+  broadcastState();
+  renderLobby();
+}
+
+function changeStepper(key, delta) {
+  if (!isHost) return;
+  const s = roomState.settings;
+  if (key === 'turnsPerPlayer') {
+    s.turnsPerPlayer = Math.max(1, Math.min(10, s.turnsPerPlayer + delta));
+  } else if (key === 'totalMinutes') {
+    s.totalMinutes = Math.max(1, Math.min(15, s.totalMinutes + delta));
+  } else if (key === 'turnSeconds') {
+    s.turnSeconds = Math.max(20, Math.min(180, s.turnSeconds + delta));
+  }
+  broadcastState();
+  renderLobby();
+}
+
+// ==========================================
+// 6. ゲーム開始・進行・絵だけで繋ぐ制御
+// ==========================================
+function hostStartGame() {
+  if (!isHost) return;
+  const randomChar = START_CHARS[Math.floor(Math.random() * START_CHARS.length)];
+  const playerCount = roomState.players.length;
+  const totalTurns = roomState.settings.endMode === 'turns'
+    ? playerCount * roomState.settings.turnsPerPlayer
+    : 999;
+
+  roomState.game = {
+    status: 'playing',
+    initialChar: randomChar,
+    turnIndex: 0,
+    totalTurns: totalTurns,
+    history: [],
+    endReason: '',
+    gameEndTime: Date.now() + roomState.settings.totalMinutes * 60 * 1000,
+    revealIndex: 0
+  };
+
+  broadcastState();
+  showScreen('screen-game');
+  setupNewTurnUI();
+}
+
+function getCurrentTurnPlayer() {
+  const idx = roomState.game.turnIndex % roomState.players.length;
+  return roomState.players[idx];
+}
+
+function setupNewTurnUI() {
+  clearCanvasLocal();
+  document.getElementById('input-answer-word').value = '';
+  document.getElementById('game-feedback').classList.add('hidden');
+
+  const g = roomState.game;
+  const currentPlayer = getCurrentTurnPlayer();
+  const isMyTurn = currentPlayer && currentPlayer.id === myPeerId;
+
+  // 自分の番か、他の子のロック画面かの切り替え
+  document.getElementById('my-turn-view').classList.toggle('hidden', !isMyTurn);
+  document.getElementById('other-turn-lock-view').classList.toggle('hidden', isMyTurn);
+
+  if (isMyTurn) {
+    if (g.history.length === 0) {
+      // 1枚目：最初の文字だけを表示
+      document.getElementById('first-turn-banner').classList.remove('hidden');
+      document.getElementById('prev-drawing-banner').classList.add('hidden');
+      document.getElementById('game-current-char').textContent = g.initialChar;
+    } else {
+      // 2枚目以降：文字は一切出さず「ひとつ前の絵」だけを表示！
+      document.getElementById('first-turn-banner').classList.add('hidden');
+      document.getElementById('prev-drawing-banner').classList.remove('hidden');
+      const prevItem = g.history[g.history.length - 1];
+      document.getElementById('prev-drawing-img').src = prevItem.imgData;
+    }
+  } else if (currentPlayer) {
+    // ロック画面の描き手名更新
+    const badge = document.getElementById('lock-drawer-badge');
+    badge.innerHTML = `<span style="color:${currentPlayer.color};">● ${currentPlayer.name}</span> さんが描いています`;
+  }
+
+  updateGameHeaderUI();
+  startTurnTimer();
+}
+
+function updateGameHeaderUI() {
+  const g = roomState.game;
+  const s = roomState.settings;
+
+  document.getElementById('game-chain-count').textContent = g.history.length + 1;
+
+  if (s.endMode === 'turns') {
+    document.getElementById('game-progress-badge').textContent = `${g.turnIndex + 1} / ${g.totalTurns} ターン目`;
+  } else {
+    const remainSec = Math.max(0, Math.ceil((g.gameEndTime - Date.now()) / 1000));
+    const m = Math.floor(remainSec / 60);
+    const sec = String(remainSec % 60).padStart(2, '0');
+    document.getElementById('game-progress-badge').textContent = `全体のこり ${m}:${sec}`;
+  }
+}
+
+function startTurnTimer() {
+  if (timerInterval) clearInterval(timerInterval);
+  currentTurnRemaining = roomState.settings.turnSeconds;
+  document.getElementById('game-timer').textContent = currentTurnRemaining;
+
+  timerInterval = setInterval(() => {
+    currentTurnRemaining--;
+    if (currentTurnRemaining < 0) currentTurnRemaining = 0;
+    document.getElementById('game-timer').textContent = currentTurnRemaining;
+
+    if (roomState.settings.endMode === 'time') {
+      updateGameHeaderUI();
+    }
+
+    if (isHost && roomState.game.status === 'playing') {
+      if (roomState.settings.endMode === 'time' && Date.now() >= roomState.game.gameEndTime) {
+        finishGame('制限時間が終了しました！');
+      } else if (currentTurnRemaining <= 0) {
+        advanceTurnWithoutWord();
+      }
+    }
+  }, 1000);
+}
+
+function advanceTurnWithoutWord() {
+  roomState.game.turnIndex++;
+  if (roomState.settings.endMode === 'turns' && roomState.game.turnIndex >= roomState.game.totalTurns) {
+    finishGame('規定の回数がおわりました！');
+  } else {
+    broadcastState();
+    setupNewTurnUI();
+  }
+}
+
+// ひらがな正規化・しりとりルール判定
+function toHiragana(str) {
+  return str.replace(/[\u30a1-\u30f6]/g, match =>
+    String.fromCharCode(match.charCodeAt(0) - 0x60)
+  );
+}
+
+function getNextShiritoriChar(word) {
+  const smallToLarge = {
+    'ゃ': 'や', 'ゅ': 'ゆ', 'ょ': 'よ',
+    'ぁ': 'あ', 'ぃ': 'い', 'ぅ': 'う', 'ぇ': 'え', 'ぉ': 'お',
+    'っ': 'つ', 'ゎ': 'わ'
+  };
+  let lastChar = word.slice(-1);
+  if (lastChar === 'ー' && word.length >= 2) {
+    lastChar = word.slice(-2, -1);
+  }
+  return smallToLarge[lastChar] || lastChar;
+}
+
+function submitWord() {
+  const rawInput = document.getElementById('input-answer-word').value.trim();
+  if (!rawInput) {
+    showGameFeedback('絵の名前を入力してね！', true);
+    return;
+  }
+  const hira = toHiragana(rawInput);
+
+  if (!/^[ぁ-んー]+$/.test(hira)) {
+    showGameFeedback('「ひらがな」だけで入力してね！', true);
+    return;
+  }
+
+  if (hira.length < 2) {
+    showGameFeedback('2文字以上の言葉にしてね！', true);
+    return;
+  }
+
+  // 1人目だけは最初の文字が提示されているので、間違っていたらその場で優しく教える
+  if (roomState.game.history.length === 0) {
+    const expectedFirst = roomState.game.initialChar;
+    if (hira[0] !== expectedFirst) {
+      showGameFeedback(`「${expectedFirst}」からはじまる言葉にしてね！`, true);
+      return;
+    }
+  }
+
+  const imgData = exportCanvasWithWhiteBg();
+
+  if (isHost) {
+    processSubmittedWord(myPeerId, hira, imgData);
+  } else {
+    sendToHostOrSelf({
+      type: 'SUBMIT_WORD',
+      word: hira,
+      imgData: imgData
+    });
+  }
+}
+
+function processSubmittedWord(senderId, word, imgData) {
+  const currentPlayer = getCurrentTurnPlayer();
+  if (!currentPlayer || currentPlayer.id !== senderId) return;
+
+  const hira = toHiragana(word);
+  const g = roomState.game;
+
+  // 1人目の文字チェック
+  if (g.history.length === 0 && hira[0] !== g.initialChar) {
+    if (senderId === myPeerId) {
+      showGameFeedback(`「${g.initialChar}」からはじまる言葉にしてね！`, true);
+    } else if (guestConns[senderId]) {
+      guestConns[senderId].send({ type: 'WORD_REJECTED', message: `「${g.initialChar}」からはじまる言葉にしてね！` });
+    }
+    return;
+  }
+
+  // しりとり繋がり判定（2人目以降も正解・不正解をその場でバラさず記録し、最後の答え合わせで発表！）
+  const expectedChar = g.history.length === 0
+    ? g.initialChar
+    : g.history[g.history.length - 1].nextChar;
+
+  const nextChar = getNextShiritoriChar(hira);
+  const isDuplicate = g.history.some(item => item.word === hira);
+  const endsWithN = (nextChar === 'ん');
+  const matchesPrev = (hira[0] === expectedChar);
+
+  let isValidChain = true;
+  let statusText = `⭕ 「${expectedChar}」から つながった！`;
+
+  if (!matchesPrev) {
+    isValidChain = false;
+    statusText = `❌ 「${expectedChar}」ではなく「${hira[0]}」だった！`;
+  } else if (isDuplicate) {
+    isValidChain = false;
+    statusText = `❌ 「${hira}」は もう出ていたよ！`;
+  } else if (endsWithN) {
+    isValidChain = false;
+    statusText = `❌ 最後に「ん」がついちゃった！`;
+  }
+
+  g.history.push({
+    word: hira,
+    nextChar: nextChar,
+    imgData: imgData,
+    playerName: currentPlayer.name,
+    playerColor: currentPlayer.color,
+    isValidChain: isValidChain,
+    statusText: statusText
+  });
+
+  g.turnIndex++;
+
+  if (roomState.settings.endMode === 'turns' && g.turnIndex >= g.totalTurns) {
+    finishGame('全員描きおわりました！さあ、答え合わせ！');
+    return;
+  }
+
+  broadcastState();
+  setupNewTurnUI();
+}
+
+function showGameFeedback(msg, isError) {
+  const el = document.getElementById('game-feedback');
+  el.textContent = msg;
+  el.className = 'feedback-msg ' + (isError ? 'feedback-error' : 'feedback-success');
+  el.classList.remove('hidden');
+}
+
+function finishGame(reason) {
+  if (timerInterval) clearInterval(timerInterval);
+  roomState.game.status = 'result';
+  roomState.game.endReason = reason;
+  roomState.game.revealIndex = 0;
+  broadcastState();
+  showResultScreen();
+}
+
+// ==========================================
+// 7. 結果画面（順番にめくって盛り上がる答え合わせ）
+// ==========================================
+function showResultScreen() {
+  if (timerInterval) clearInterval(timerInterval);
+  showScreen('screen-result');
+
+  const g = roomState.game;
+  const history = g.history;
+
+  document.getElementById('result-reason').textContent = g.endReason;
+  document.getElementById('reveal-initial-char').textContent = g.initialChar;
+
+  if (history.length === 0) {
+    document.getElementById('reveal-stage').classList.add('hidden');
+    document.getElementById('result-all-section').classList.remove('hidden');
+    document.getElementById('result-headline').textContent = '描かれた絵がありませんでした';
+    renderAllGallery(history);
+    return;
+  }
+
+  document.getElementById('reveal-stage').classList.remove('hidden');
+  const currentIdx = Math.min(g.revealIndex, history.length - 1);
+  const item = history[currentIdx];
+
+  document.getElementById('reveal-step-indicator').textContent = `${currentIdx + 1} / ${history.length} 枚目`;
+  document.getElementById('reveal-img').src = item.imgData;
+  document.getElementById('reveal-author').innerHTML = `<span style="color:${item.playerColor};">● ${item.playerName}</span> さんの絵`;
+  document.getElementById('reveal-word').textContent = `「 ${item.word} 」`;
+
+  const tagEl = document.getElementById('reveal-status-tag');
+  tagEl.textContent = item.statusText;
+  tagEl.className = 'reveal-status-tag ' + (item.isValidChain ? 'tag-ok' : 'tag-ng');
+
+  // アニメーション再発火
+  const cardContainer = document.getElementById('reveal-card-container');
+  cardContainer.classList.remove('reveal-card-anim');
+  void cardContainer.offsetWidth;
+  cardContainer.classList.add('reveal-card-anim');
+
+  const isLastRevealed = (currentIdx >= history.length - 1);
+
+  if (!isLastRevealed) {
+    // まだめくる絵が残っている
+    document.getElementById('result-headline').textContent = '1枚ずつ 答え合わせ！';
+    document.getElementById('host-reveal-controls').classList.toggle('hidden', !isHost);
+    document.getElementById('guest-reveal-wait').classList.toggle('hidden', isHost);
+    document.getElementById('result-all-section').classList.add('hidden');
+  } else {
+    // 最後の1枚までめくり終わった！
+    const validCount = history.filter(h => h.isValidChain).length;
+    document.getElementById('result-headline').textContent = `全${history.length}枚中 ${validCount}個 つながったよ！`;
+    document.getElementById('host-reveal-controls').classList.add('hidden');
+    document.getElementById('guest-reveal-wait').classList.add('hidden');
+
+    document.getElementById('result-all-section').classList.remove('hidden');
+    renderAllGallery(history);
+  }
+}
+
+function hostNextReveal() {
+  if (!isHost) return;
+  if (roomState.game.revealIndex < roomState.game.history.length - 1) {
+    roomState.game.revealIndex++;
+    broadcastState();
+    showResultScreen();
+  }
+}
+
+function renderAllGallery(history) {
+  const gallery = document.getElementById('result-gallery');
+  gallery.innerHTML = '';
+
+  history.forEach((item, idx) => {
+    const card = document.createElement('div');
+    card.className = 'result-card' + (item.isValidChain ? '' : ' card-ng');
+    card.innerHTML = `
+      <img src="${item.imgData}" alt="${item.word}">
+      <div class="result-word">${idx + 1}. ${item.word} ${item.isValidChain ? '⭕' : '❌'}</div>
+      <div class="result-author" style="color:${item.playerColor};">● ${item.playerName}</div>
+    `;
+    gallery.appendChild(card);
+  });
+
+  document.getElementById('host-replay-area').classList.toggle('hidden', !isHost);
+  document.getElementById('guest-replay-wait').classList.toggle('hidden', isHost);
+}
+
+function hostPlayAgain() {
+  if (!isHost) return;
+  roomState.game.status = 'lobby';
+  roomState.game.history = [];
+  roomState.game.turnIndex = 0;
+  roomState.game.revealIndex = 0;
+  broadcastState();
+  enterLobbyUI();
+}
+
+// ==========================================
+// 8. お絵かきキャンバス機能（12色・4太さ）
+// ==========================================
+function initPenPalette() {
+  const palette = document.getElementById('pen-palette-12');
+  palette.innerHTML = '';
+  PEN_COLORS.forEach((color, index) => {
+    const btn = document.createElement('button');
+    btn.className = 'pen-color-btn' + (index === 0 ? ' active' : '');
+    btn.style.backgroundColor = color;
+    btn.onclick = () => {
+      isEraser = false;
+      penColor = color;
+      document.getElementById('btn-eraser').classList.remove('active');
+      document.querySelectorAll('.pen-color-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    };
+    palette.appendChild(btn);
+  });
+}
+
+function selectPenSize(size) {
+  penSize = size;
+  document.querySelectorAll('.size-btn').forEach(btn => {
+    btn.classList.toggle('active', Number(btn.dataset.size) === size);
+  });
+}
+
+function toggleEraser() {
+  isEraser = !isEraser;
+  document.getElementById('btn-eraser').classList.toggle('active', isEraser);
+  if (isEraser) {
+    document.querySelectorAll('.pen-color-btn').forEach(b => b.classList.remove('active'));
+  } else {
+    const idx = PEN_COLORS.indexOf(penColor);
+    const btns = document.querySelectorAll('.pen-color-btn');
+    if (btns[idx]) btns[idx].classList.add('active');
+  }
+}
+
+function getCanvasCoords(e) {
+  const rect = canvas.getBoundingClientRect();
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  return {
+    x: (clientX - rect.left) * (canvas.width / rect.width),
+    y: (clientY - rect.top) * (canvas.height / rect.height)
+  };
+}
+
+function canIDrawNow() {
+  if (roomState.game.status !== 'playing') return false;
+  const cp = getCurrentTurnPlayer();
+  return cp && cp.id === myPeerId;
+}
+
+function setupCanvasEvents() {
+  const startDraw = (e) => {
+    if (!canIDrawNow()) return;
+    e.preventDefault();
+    isDrawing = true;
+    const pos = getCanvasCoords(e);
+    const drawColor = isEraser ? '#ffffff' : penColor;
+    const drawWidth = isEraser ? penSize * 2.2 : penSize;
+
+    currentStroke = {
+      color: drawColor,
+      size: drawWidth,
+      points: [pos]
+    };
+
+    drawSegment(pos, pos, drawColor, drawWidth);
+  };
+
+  const moveDraw = (e) => {
+    if (!isDrawing || !canIDrawNow()) return;
+    e.preventDefault();
+    const pos = getCanvasCoords(e);
+    const prevPos = currentStroke.points[currentStroke.points.length - 1];
+    currentStroke.points.push(pos);
+
+    drawSegment(prevPos, pos, currentStroke.color, currentStroke.size);
+  };
+
+  const endDraw = () => {
+    if (!isDrawing) return;
+    isDrawing = false;
+    if (currentStroke) {
+      strokes.push(currentStroke);
+      currentStroke = null;
+    }
+  };
+
+  canvas.addEventListener('mousedown', startDraw);
+  canvas.addEventListener('mousemove', moveDraw);
+  window.addEventListener('mouseup', endDraw);
+
+  canvas.addEventListener('touchstart', startDraw, { passive: false });
+  canvas.addEventListener('touchmove', moveDraw, { passive: false });
+  window.addEventListener('touchend', endDraw);
+}
+
+function drawSegment(from, to, color, size) {
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = color;
+  ctx.lineWidth = size;
+  ctx.beginPath();
+  ctx.moveTo(from.x, from.y);
+  ctx.lineTo(to.x, to.y);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function redrawAllStrokes() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  strokes.forEach(stroke => {
+    if (stroke.points.length === 1) {
+      drawSegment(stroke.points[0], stroke.points[0], stroke.color, stroke.size);
+    } else {
+      for (let i = 1; i < stroke.points.length; i++) {
+        drawSegment(stroke.points[i - 1], stroke.points[i], stroke.color, stroke.size);
+      }
+    }
+  });
+}
+
+function undoStroke() {
+  if (!canIDrawNow() || strokes.length === 0) return;
+  strokes.pop();
+  redrawAllStrokes();
+}
+
+function clearCanvasLocal() {
+  strokes = [];
+  currentStroke = null;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+function clearCanvasConfirm() {
+  if (!canIDrawNow()) return;
+  clearCanvasLocal();
+}
+
+function exportCanvasWithWhiteBg() {
+  const tempCanvas = document.createElement('canvas');
+  tempCanvas.width = canvas.width;
+  tempCanvas.height = canvas.height;
+  const tCtx = tempCanvas.getContext('2d');
+  tCtx.fillStyle = '#ffffff';
+  tCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+  tCtx.drawImage(canvas, 0, 0);
+  return tempCanvas.toDataURL('image/png');
+}
+</script>
+</body>
+</html>
